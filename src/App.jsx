@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import OAuthCallback from './pages/OAuthCallback'
 import Dashboard from './pages/Dashboard'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
@@ -27,6 +28,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/oauth-callback" element={<OAuthCallback />} />
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/products" element={<PrivateRoute><Products /></PrivateRoute>} />
           <Route path="/products/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
