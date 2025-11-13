@@ -12,18 +12,57 @@ const Dashboard = () => {
     auctions: 0,
     sales: 0
   })
+  const [marketPrices, setMarketPrices] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchStats()
+    fetchDashboardData()
   }, [])
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await axios.get('/api/dashboard/stats')
-      setStats(response.data)
+      setLoading(true)
+      // ดึงข้อมูลทั้ง 3 endpoints พร้อมกัน
+      const [statsRes, pricesRes, notificationsRes] = await Promise.all([
+        axios.get('/api/dashboard/stats'),
+        axios.get('/api/dashboard/market-prices'),
+        axios.get('/api/dashboard/notifications')
+      ])
+      
+      setStats(statsRes.data)
+      setMarketPrices(pricesRes.data)
+      setNotifications(notificationsRes.data)
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      console.error('Failed to fetch dashboard data:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const getTimeAgo = (timestamp) => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInSeconds = Math.floor((now - time) / 1000)
+    
+    if (diffInSeconds < 60) return 'เมื่อสักครู่'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} นาทีที่แล้ว`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ชั่วโมงที่แล้ว`
+    return `${Math.floor(diffInSeconds / 86400)} วันที่แล้ว`
+  }
+
+  const getNotificationColor = (type) => {
+    const colors = {
+      negotiation: 'blue',
+      negotiation_response: 'green',
+      new_auction: 'purple',
+      auction_ending: 'orange',
+      outbid: 'red',
+      company_sale: 'indigo',
+      pending_approval: 'yellow',
+      new_negotiation: 'teal'
+    }
+    return colors[type] || 'gray'
   }
 
   return (
@@ -88,44 +127,67 @@ const Dashboard = () => {
               <TrendingUp className="h-6 w-6 mr-2 text-primary-600" />
               ภาพรวมตลาด
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">ข้าวหอมมะลิ</span>
-                <span className="font-semibold text-primary-600">฿ 25,000/ตัน</span>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="animate-pulse p-3 bg-gray-100 rounded-lg h-12"></div>
+                ))}
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">ข้าวเหนียว</span>
-                <span className="font-semibold text-primary-600">฿ 22,000/ตัน</span>
+            ) : marketPrices.length > 0 ? (
+              <div className="space-y-3">
+                {marketPrices.map((price, index) => (
+                  <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div>
+                      <span className="text-gray-700 font-medium">{price.product_name}</span>
+                      <span className="text-xs text-gray-500 ml-2">({price.category})</span>
+                    </div>
+                    <span className="font-semibold text-primary-600">
+                      ฿ {parseFloat(price.price).toLocaleString()}/ตัน
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">ข้าวโพด</span>
-                <span className="font-semibold text-primary-600">฿ 8,500/ตัน</span>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>ยังไม่มีข้อมูลราคากลาง</p>
+                <p className="text-sm mt-1">รอ Admin ตั้งค่าราคากลาง</p>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-700">ข้าวสาลี</span>
-                <span className="font-semibold text-primary-600">฿ 12,000/ตัน</span>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="card">
             <h2 className="text-xl font-bold text-gray-800 mb-4">
               แจ้งเตือนล่าสุด
             </h2>
-            <div className="space-y-3">
-              <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
-                <p className="text-sm text-gray-700">มีการต่อรองราคาใหม่สำหรับสินค้าของคุณ</p>
-                <p className="text-xs text-gray-500 mt-1">5 นาทีที่แล้ว</p>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="animate-pulse p-3 bg-gray-100 rounded-lg h-16"></div>
+                ))}
               </div>
-              <div className="p-3 bg-green-50 border-l-4 border-green-500 rounded">
-                <p className="text-sm text-gray-700">มีการประมูลใหม่เปิดให้เข้าร่วม</p>
-                <p className="text-xs text-gray-500 mt-1">1 ชั่วโมงที่แล้ว</p>
+            ) : notifications.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {notifications.map((notification, index) => {
+                  const color = getNotificationColor(notification.type)
+                  return (
+                    <div 
+                      key={index} 
+                      className={`p-3 bg-${color}-50 border-l-4 border-${color}-500 rounded hover:shadow-md transition-shadow cursor-pointer`}
+                      onClick={() => notification.link && (window.location.href = notification.link)}
+                    >
+                      <p className="text-sm font-medium text-gray-800">{notification.title}</p>
+                      <p className="text-sm text-gray-700 mt-1">{notification.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">{getTimeAgo(notification.timestamp)}</p>
+                    </div>
+                  )
+                })}
               </div>
-              <div className="p-3 bg-purple-50 border-l-4 border-purple-500 rounded">
-                <p className="text-sm text-gray-700">ราคากลางถูกอัพเดทโดยผู้ดูแลระบบ</p>
-                <p className="text-xs text-gray-500 mt-1">3 ชั่วโมงที่แล้ว</p>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>ยังไม่มีการแจ้งเตือน</p>
+                <p className="text-sm mt-1">กิจกรรมต่างๆ จะแสดงที่นี่</p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
