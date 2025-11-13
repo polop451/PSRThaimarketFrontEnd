@@ -23,6 +23,8 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+      console.log('🔍 Fetching dashboard data...')
+      
       // ดึงข้อมูลทั้ง 3 endpoints พร้อมกัน
       const [statsRes, pricesRes, notificationsRes] = await Promise.all([
         axios.get('/api/dashboard/stats'),
@@ -30,11 +32,17 @@ const Dashboard = () => {
         axios.get('/api/dashboard/notifications')
       ])
       
+      console.log('✅ Stats:', statsRes.data)
+      console.log('✅ Market Prices:', pricesRes.data)
+      console.log('✅ Notifications:', notificationsRes.data)
+      
       setStats(statsRes.data)
       setMarketPrices(pricesRes.data)
       setNotifications(notificationsRes.data)
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
+      console.error('❌ Failed to fetch dashboard data:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
     } finally {
       setLoading(false)
     }
